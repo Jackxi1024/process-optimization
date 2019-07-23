@@ -5,15 +5,17 @@ from modules.lib_basics import Basics
 from modules.class_stream import Stream
 from modules.lib_solvers import Solvers
 
-
+CP_reactor = 2170 # in J/kgK
+CP_water = 4180 # in J/kgK
 
 class Reactor():
 
     k1 = 43 # in 1/h
     k2 = 172 # in 1/h
     k3 = 258 # in 1/h
-    V = 1e3 # in ft^3
-    p = 50 # in lb/ft^3
+    V = 1e3 # in m^3
+    p = 50 # in kg/m^3
+    DrH = 100 # in J/kg
 
     def __init__(self, FEED_A, FEED_B, RECYCLE):
         # set-up for logging of reactor. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -26,13 +28,14 @@ class Reactor():
 
         # needed for system and jacobian functions to access data.
         self._FEED_A = FEED_A; self._FEED_B = FEED_B; self._RECYCLE = RECYCLE;
+        self._TEMPERATURE = (FEED_A.Ftotal*FEED_A.T + FEED_B.Ftotal*FEED_B.T + RECYCLE.Ftotal*RECYCLE.T)/(FEED_A.Ftotal + FEED_B.Ftotal + RECYCLE.Ftotal)
 
 
     def __del__(self):
         self.logger.debug("Reactor instance is closed")
 
         # remove saved data just to be sure it cannot be reused on next iteration
-        del self._FEED_A, self._FEED_B, self._RECYCLE
+        del self._FEED_A, self._FEED_B, self._RECYCLE, self._TEMPERATURE
 
 
     # calls the sequential approach for the reactor
@@ -56,6 +59,8 @@ class Reactor():
         # construct solution stream leaving the reactor and return it
         FEFF = Stream()
         FEFF.F = solution_flows
+        print(self._TEMPERATURE + self.DrH/CP_reactor*(self._FEED_A.F[0]+self._FEED_B.F[0]+self._RECYCLE.F[0]-FEFF.F[0]))
+        FEFF.T = self._TEMPERATURE + self.DrH/CP_reactor*(self._FEED_A.F[0]+self._FEED_B.F[0]+self._RECYCLE.F[0]-FEFF.F[0])
 
         Basics().mass_balance_check([self._FEED_A, self._FEED_B, self._RECYCLE], [FEFF], by_species = False)
 
@@ -156,13 +161,14 @@ class HeatExchanger():
 
         # needed for system and jacobian functions to access data.
         self._FEED = FEED
+        self._TEMPERATURE = FEED.T
 
 
     def __del__(self):
         self.logger.debug("Heat Exchanger instance is closed")
 
         # remove saved data just to be sure it cannot be reused on next iteration
-        del self._FEED
+        del self._FEED, self._TEMPERATURE
 
 
    # calls the sequential approach for the heat exchanger
@@ -172,6 +178,7 @@ class HeatExchanger():
 
         OUTFLOW = Stream()
         OUTFLOW = self._FEED
+        OUTFLOW.T = self._TEMPERATURE
 
         Basics().mass_balance_check([self._FEED], [OUTFLOW])
 
@@ -239,18 +246,16 @@ class Decanter():
 
         self.logger.debug("Decanter instance is initialised")
 
-        # molecular weight ratios of compounds
-        self._MW = np.array([1, 1, 2, 2, 1, 3])
-
         # needed for system and jacobian functions to access data.
         self._FEED = FEED
+        self._TEMPERATURE = FEED.T
 
 
     def __del__(self):
         self.logger.debug("Decanter instance is closed")
 
         # remove saved data just to be sure it cannot be reused on next iteration
-        del self._FEED, self._MW
+        del self._FEED, self._TEMPERATURE
 
 
    # calls the sequential approach for the decanter
@@ -261,12 +266,8 @@ class Decanter():
         OUTFLOW_GUESS = OUTFLOW_GUESS.F
         WASTE_GUESS = WASTE_GUESS.F
 
-        # generate remaining guesses based on FEFF_guess
-        X_OUTFLOW_guess = (OUTFLOW_GUESS[4:6]/self._MW[4:6])/sum(OUTFLOW_GUESS/self._MW)
-        X_WASTE_guess = (WASTE_GUESS[4:6]/self._MW[4:6])/sum(WASTE_GUESS/self._MW)
-
         # compile guesses
-        DATA = np.concatenate((OUTFLOW_GUESS, WASTE_GUESS, X_OUTFLOW_guess, X_WASTE_guess))
+        DATA = np.concatenate((OUTFLOW_GUESS, WASTE_GUESS))
 
         # calculate solution based on default solvers for units, then decompose solution
         solution, stats = Solvers().solve(system = self.System, jacobian = self.Jacobian, guess = DATA, category = 'Unit')
@@ -280,6 +281,8 @@ class Decanter():
         OUTFLOW = Stream()
         WASTE.F = solution_waste_flows
         OUTFLOW.F = solution_outlet_flows
+        WASTE.T = self._TEMPERATURE
+        OUTFLOW.T = self._TEMPERATURE
 
         Basics().mass_balance_check([self._FEED], [WASTE, OUTFLOW])
 
@@ -292,29 +295,10 @@ class Decanter():
         # reassign values to local vars to make the equations more readable
         FoutA = DATA[0]; FoutB = DATA[1]; FoutC = DATA[2]; FoutE = DATA[3]; FoutP = DATA[4]; FoutG = DATA[5];
         FwasteA = DATA[6]; FwasteB = DATA[7]; FwasteC = DATA[8]; FwasteE = DATA[9]; FwasteP = DATA[10]; FwasteG = DATA[11];
-        xoutP = DATA[12]; xoutG = DATA[13];
-        xwasteP = DATA[14]; xwasteG = DATA[15];
         FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-        MWA = self._MW[0]; MWB = self._MW[1]; MWC = self._MW[2]; MWE = self._MW[3]; MWP = self._MW[4]; MWG = self._MW[5]; 
 
-        # total flows
-        Mout = abs(FoutA/MWA) + abs(FoutB/MWB) + abs(FoutC/MWC) + abs(FoutE/MWE) + abs(FoutP/MWP) + abs(FoutG/MWG)
-        Mwaste = abs(FwasteA/MWA) + abs(FwasteB/MWB) + abs(FwasteC/MWC) + abs(FwasteE/MWE) + abs(FwasteP/MWP) + abs(FwasteG/MWG)
-
-        # activity coefficients
-        if xoutP <= 0.0 or xoutG <= 0.0 or xoutP >= 1.0 or xoutG >= 1.0:
-            gamma_outP = 1
-            gamma_outG = 1     
-        else:
-            gamma_outP = np.exp(2.99/((1+(2.99*xoutP)/(9.34*xoutG))**2))
-            gamma_outG = np.exp(9.34/((1+(9.34*xoutG)/(2.99*xoutP))**2)) 
-
-        if xwasteP <= 0.0 or xwasteG <= 0.0 or xwasteP >= 1.0 or xwasteG >= 1.0:
-            gamma_wasteP = 1
-            gamma_wasteG = 1
-        else:
-            gamma_wasteP = np.exp(3.47/((1+(3.47*xwasteP)/(0.48*xwasteG))**2))
-            gamma_wasteG = np.exp(0.48/((1+(0.48*xwasteG)/(3.47*xwasteP))**2))
+        temp_factor_P = 0.3*(1-np.exp(-0.0025*(self._TEMPERATURE-300)))
+        temp_factor_G = 0.95*(1-np.exp(-0.0015*(self._TEMPERATURE-300)))
 
         # system of equations
         return np.array([
@@ -328,12 +312,8 @@ class Decanter():
             FwasteE,
             FoutP + FwasteP - FP,
             FoutG + FwasteG - FG,
-            xoutP - (FoutP/MWP)/Mout,
-            xoutG - (FoutG/MWG)/Mout,
-            xwasteP - (FwasteP/MWP)/Mwaste,
-            xwasteG - (FwasteG/MWG)/Mwaste,
-            xoutP * gamma_outP - xwasteP * gamma_wasteP,
-            xoutG * gamma_outG - xwasteG * gamma_wasteG
+            FwasteP - temp_factor_P*FP - 0.05*FwasteG,
+            FwasteG - temp_factor_G*FG + 0.05*FoutE
         ])
 
 
@@ -343,53 +323,29 @@ class Decanter():
         # reassign values to local vars to make the equations more readable
         FoutA = DATA[0]; FoutB = DATA[1]; FoutC = DATA[2]; FoutE = DATA[3]; FoutP = DATA[4]; FoutG = DATA[5];
         FwasteA = DATA[6]; FwasteB = DATA[7]; FwasteC = DATA[8]; FwasteE = DATA[9]; FwasteP = DATA[10]; FwasteG = DATA[11];
-        xoutP = DATA[12]; xoutG = DATA[13];
-        xwasteP = DATA[14]; xwasteG = DATA[15];
         FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-        MWA = self._MW[0]; MWB = self._MW[1]; MWC = self._MW[2]; MWE = self._MW[3]; MWP = self._MW[4]; MWG = self._MW[5]; 
-
-        # total flows
-        Mout = abs(FoutA/MWA) + abs(FoutB/MWB) + abs(FoutC/MWC) + abs(FoutE/MWE) + abs(FoutP/MWP) + abs(FoutG/MWG)
-        Mwaste = abs(FwasteA/MWA) + abs(FwasteB/MWB) + abs(FwasteC/MWC) + abs(FwasteE/MWE) + abs(FwasteP/MWP) + abs(FwasteG/MWG)
-
-        # activity coefficients
-        if xoutP <= 0.0 or xoutG <= 0.0 or xoutP >= 1.0 or xoutG >= 1.0:
-            gamma_outP = 1
-            gamma_outG = 1     
-        else:
-            gamma_outP = np.exp(2.99/((1+(2.99*xoutP)/(9.34*xoutG))**2))
-            gamma_outG = np.exp(9.34/((1+(9.34*xoutG)/(2.99*xoutP))**2)) 
-
-        if xwasteP <= 0.0 or xwasteG <= 0.0 or xwasteP >= 1.0 or xwasteG >= 1.0:
-            gamma_wasteP = 1
-            gamma_wasteG = 1
-        else:
-            gamma_wasteP = np.exp(3.47/((1+(3.47*xwasteP)/(0.48*xwasteG))**2))
-            gamma_wasteG = np.exp(0.48/((1+(0.48*xwasteG)/(3.47*xwasteP))**2))
-
        
         # jacobian
         return np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-            [FoutP/(MWA*MWP*Mout**2), FoutP/(MWB*MWP*Mout**2), FoutP/(MWC*MWP*Mout**2), FoutP/(MWE*MWP*Mout**2), (FoutP-MWP*Mout)/((MWP*Mout)**2), FoutP/(MWG*MWP*Mout**2), 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-            [FoutG/(MWA*MWG*Mout**2), FoutG/(MWB*MWG*Mout**2), FoutG/(MWC*MWG*Mout**2), FoutG/(MWE*MWG*Mout**2), FoutG/(MWP*MWG*Mout**2), (FoutG-MWG*Mout)/((MWG*Mout)**2), 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, FwasteP/(MWA*MWP*Mwaste**2), FwasteP/(MWB*MWP*Mwaste**2), FwasteP/(MWC*MWP*Mwaste**2), FwasteP/(MWE*MWP*Mwaste**2), (FwasteP-MWP*Mwaste)/((MWP*Mwaste)**2), FwasteP/(MWG*MWP*Mwaste**2), 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, FwasteG/(MWA*MWG*Mwaste**2), FwasteG/(MWB*MWG*Mwaste**2), FwasteG/(MWC*MWG*Mwaste**2), FwasteG/(MWE*MWG*Mwaste**2), FwasteG/(MWP*MWG*Mwaste**2), (FwasteG-MWG*Mwaste)/((MWG*Mwaste)**2), 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, gamma_outP+xoutP*(-(2*(2.99**2)*gamma_outP)/(9.34*xoutG*(1+(2.99*xoutP)/(9.34*xoutG))**3)), xoutP*((2*(2.99**2)*9.34**2*xoutP*xoutG*gamma_outP)/((9.34*xoutG+2.99*xoutP)**3)), -(gamma_wasteP+xwasteP*(-(2*3.47**2*gamma_wasteP)/(0.48*xwasteG*(1+(3.47*xwasteP)/(0.48*xwasteG))**3))), -xwasteP*((2*(3.47**2)*0.48**2*xwasteP*xwasteG*gamma_wasteP)/((0.48*xwasteG+3.47*xwasteP)**3))],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, xoutG*( (2*(9.34**2)*2.99**2*xoutG*xoutP*gamma_outG)/((2.99*xoutP+9.34*xoutG)**3)), gamma_outG+xoutG*(-(2*(9.34**2)*gamma_outG)/(2.99*xoutP*(1+(9.34*xoutG)/(2.99*xoutP))**3)), -xwasteG*((2*(0.48**2)*3.47**2*xwasteG*xwasteP*gamma_wasteG)/((3.47*xwasteP+0.48*xwasteG)**3)), -(gamma_wasteG+xwasteG*(-(2*(0.48**2)*gamma_wasteG)/(3.47*xwasteP*(1+(0.48*xwasteG)/(3.47*xwasteP))**3)))] 
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -0.05],
+            [0, 0, 0, 0.05, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
 
     # returns the values of the jacobian matrix for the system of equations given the values in DATA
     def Jacobian_Feed(self):
+
+        temp_factor_P = 0.3*(1-np.exp(-0.0025*(self._TEMPERATURE-300)))
+        temp_factor_G = 0.95*(1-np.exp(-0.0015*(self._TEMPERATURE-300)))
 
         # jacobian
         return np.array([
@@ -403,12 +359,8 @@ class Decanter():
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, -1, 0],
             [0, 0, 0, 0, 0, -1],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0]
+            [0, 0, 0, 0,-temp_factor_P, 0],
+            [0, 0, 0, 0, 0, temp_factor_G]
         ])
 
 
@@ -435,13 +387,14 @@ class DistillationColumn():
         # needed for system and jacobian functions to access data.
         FEED.F[FEED.F == 0.0] = 0.001
         self._FEED = FEED
+        self._TEMPERATURE = FEED.T
 
 
     def __del__(self):
         self.logger.debug("Distillation column instance is closed")
 
         # remove saved data just to be sure it cannot be reused on next iteration
-        del self._FEED
+        del self._FEED, self._TEMPERATURE
 
 
    # calls the sequential approach for the distillation column
@@ -466,6 +419,8 @@ class DistillationColumn():
         BOTTOM = Stream()
         HEAD.F = head_flows
         BOTTOM.F = bottom_flows
+        HEAD.T = self._TEMPERATURE + 0.5*(1000 - self._TEMPERATURE)
+        BOTTOM.T = self._TEMPERATURE - 0.5*(self._TEMPERATURE - 300)
 
         Basics().mass_balance_check([self._FEED], [HEAD, BOTTOM])
 
@@ -567,6 +522,7 @@ class Splitter():
 
         # needed for system and jacobian functions to access data.
         self._FEED = FEED
+        self._TEMPERATURE = FEED.T
         if PURGERATIO < 0.001: PURGERATIO = 0.001
         if PURGERATIO > 0.999: PURGERATIO = 0.999
         self._PURGERATIO = PURGERATIO
@@ -576,7 +532,7 @@ class Splitter():
         self.logger.debug("Distillation column instance is closed")
 
         # remove saved data just to be sure it cannot be reused on next iteration
-        del self._FEED, self._PURGERATIO
+        del self._FEED, self._PURGERATIO, self._TEMPERATURE
 
 
 
@@ -602,6 +558,8 @@ class Splitter():
         PURGE = Stream()
         RECYCLE.F = recycle_flows
         PURGE.F = purge_flows
+        RECYCLE.T = self._TEMPERATURE
+        PURGE.T = self._TEMPERATURE
 
         Basics().mass_balance_check([self._FEED], [RECYCLE, PURGE])
 

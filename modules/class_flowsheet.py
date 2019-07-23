@@ -6,7 +6,8 @@ from modules.class_stream import Stream
 from modules.lib_solvers import Solvers
 from modules.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
 
-DEBUG = False
+DEBUG = True
+T_GUESS = 350
 
 class Flowsheet():
 
@@ -21,24 +22,34 @@ class Flowsheet():
 
         self._FEED_A = Stream()
         self._FEED_A.F = FEED_A.F
+        self._FEED_A.T = 350
         self._FEED_B = Stream()
         self._FEED_B.F = FEED_B.F
+        self._FEED_B.T = 350
         self._RECYCLE = Stream()
         self._RECYCLE.F = GUESSES['RECYCLE']
+        self._RECYCLE.T = 350
         self._REACOUT = Stream()
         self._REACOUT.F = GUESSES['REACOUT']
+        self._REACOUT.T = 350
         self._HEATEXOUT = Stream()
         self._HEATEXOUT.F = GUESSES['HEATEXOUT']
+        self._HEATEXOUT.T = 350
         self._DECANTEROUT = Stream()
         self._DECANTEROUT.F = GUESSES['DECANTEROUT']
+        self._DECANTEROUT.T = 350
         self._WASTE = Stream()
         self._WASTE.F = GUESSES['WASTE']
+        self._WASTE.T = 350
         self._BOTTOMS = Stream()
         self._BOTTOMS.F = GUESSES['BOTTOMS']
+        self._BOTTOMS.T = 350
         self._PRODUCT = Stream()
         self._PRODUCT.F = GUESSES['PRODUCT']
+        self._PRODUCT.T = 350
         self._PURGE = Stream()
         self._PURGE.F = GUESSES['PURGE']
+        self._PURGE.T = 350
 
         if PURGERATIO is None:
             self._PURGERATIO = GUESSES['PURGERATIO']
@@ -47,8 +58,6 @@ class Flowsheet():
 
         self._MW = np.array([1, 1, 2, 2, 1, 3])
         self._REACOUT_W = self._REACOUT.F/sum(self._REACOUT.F)
-        self._DECANTEROUT_X = (self._DECANTEROUT.F[4:6]/self._MW[4:6])/sum(self._DECANTEROUT.F/self._MW)
-        self._WASTE_X = (self._WASTE.F[4:6]/self._MW[4:6])/sum(self._WASTE.F/self._MW)
 
         if DEBUG: self.print_Guess()
 
@@ -264,8 +273,6 @@ class Flowsheet():
             self._HEATEXOUT.F,
             self._DECANTEROUT.F,
             self._WASTE.F,
-            self._DECANTEROUT_X,
-            self._WASTE_X,
             self._PRODUCT.F,
             self._BOTTOMS.F,
             self._RECYCLE.F,
@@ -286,16 +293,16 @@ class Flowsheet():
         solution, stats = Solvers().solve(system = self.EO_System, jacobian = self. EO_Jacobian, guess = self._EO_guess, category = 'EO')
         self.logger.info("Converged EO system in "+str(stats["Iterations"])+" iterations.")
         Basics().TrackPerformance(stats, 'EO')
-        if DBEUG: self.End_Convergence(title = "EO")
+        if DEBUG: self.End_Convergence(title = "EO")
 
         self._REACOUT.F = solution[0:6]
         self._HEATEXOUT.F = solution[12:18]
         self._DECANTEROUT.F = solution[18:24]
         self._WASTE.F = solution[24:30]
-        self._PRODUCT.F = solution[34:40]
-        self._BOTTOMS.F = solution[40:46]
-        self._RECYCLE.F = solution[46:52]
-        self._PURGE.F = solution[52:58]
+        self._PRODUCT.F = solution[30:36]
+        self._BOTTOMS.F = solution[36:42]
+        self._RECYCLE.F = solution[42:48]
+        self._PURGE.F = solution[48:54]
 
         Basics().mass_balance_check([self._FEED_A, self._FEED_B, self._RECYCLE], [self._REACOUT], by_species = False)
         Basics().mass_balance_check([self._REACOUT], [self._HEATEXOUT])
@@ -314,14 +321,13 @@ class Flowsheet():
         DATA_HEATEXOUT = DATA[12:18]
         DATA_DECANTOUT = DATA[18:24]
         DATA_WASTE = DATA[24:30]
-        DATA_xDECANTER = DATA[30:34]
-        DATA_HEAD = DATA[34:40]
-        DATA_BOT = DATA[40:46]
-        DATA_RECYCLE = DATA[46:52]
-        DATA_PURGE = DATA[52:58]
+        DATA_HEAD = DATA[30:36]
+        DATA_BOT = DATA[36:42]
+        DATA_RECYCLE = DATA[42:48]
+        DATA_PURGE = DATA[48:54]
 
         DATA_REACTOR = np.concatenate((DATA_REACOUT, DATA_wREAC))
-        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE, DATA_xDECANTER))
+        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE))
         DATA_DIST = np.concatenate((DATA_HEAD, DATA_BOT))
         DATA_SPLITTER = np.concatenate((DATA_RECYCLE, DATA_PURGE))
 
@@ -366,14 +372,13 @@ class Flowsheet():
         DATA_HEATEXOUT = DATA[12:18]
         DATA_DECANTOUT = DATA[18:24]
         DATA_WASTE = DATA[24:30]
-        DATA_xDECANTER = DATA[30:34]
-        DATA_HEAD = DATA[34:40]
-        DATA_BOT = DATA[40:46]
-        DATA_RECYCLE = DATA[46:52]
-        DATA_PURGE = DATA[52:58]
+        DATA_HEAD = DATA[30:36]
+        DATA_BOT = DATA[36:42]
+        DATA_RECYCLE = DATA[42:48]
+        DATA_PURGE = DATA[48:54]
 
         DATA_REACTOR = np.concatenate((DATA_REACOUT, DATA_wREAC))
-        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE, DATA_xDECANTER))
+        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE))
         DATA_DIST = np.concatenate((DATA_HEAD, DATA_BOT))
         DATA_SPLITTER = np.concatenate((DATA_RECYCLE, DATA_PURGE))
 
@@ -413,22 +418,22 @@ class Flowsheet():
         Jacobian_Splitter = SPLITTER.Jacobian(DATA_SPLITTER)
         Jacobian_Splitter_Feed = SPLITTER.Jacobian_Feed()
 
-        jacobian = np.zeros((58, 58))
+        jacobian = np.zeros((54, 54))
 
         jacobian[0:12, 0:12] = Jacobian_Reactor
-        jacobian[0:12, 46:52] = Jacobian_Reactor_Recycle
+        jacobian[0:12, 42:48] = Jacobian_Reactor_Recycle
 
         jacobian[12:18, 12:18] = Jacobian_HeatExchanger
         jacobian[12:18, 0:6] = Jacobian_HeatExchanger_Feed
 
-        jacobian[18:34, 18:34] = Jacobian_Decanter
-        jacobian[18:34, 12:18] = Jacobian_Decanter_Feed
+        jacobian[18:30, 18:30] = Jacobian_Decanter
+        jacobian[18:30, 12:18] = Jacobian_Decanter_Feed
 
-        jacobian[34:46, 34:46] = Jacobian_Distillation
-        jacobian[34:46, 18:24] = Jacobian_Distillation_Feed
+        jacobian[30:42, 30:42] = Jacobian_Distillation
+        jacobian[30:42, 18:24] = Jacobian_Distillation_Feed
 
-        jacobian[46:58, 46:58] = Jacobian_Splitter
-        jacobian[46:58, 40:46] = Jacobian_Splitter_Feed
+        jacobian[42:54, 42:54] = Jacobian_Splitter
+        jacobian[42:54, 36:42] = Jacobian_Splitter_Feed
 
         return jacobian
 
@@ -454,11 +459,11 @@ class Flowsheet():
         self._HEATEXOUT.F = solution[12:18]
         self._DECANTEROUT.F = solution[18:24]
         self._WASTE.F = solution[24:30]
-        self._PRODUCT.F = solution[34:40]
-        self._BOTTOMS.F = solution[40:46]
-        self._RECYCLE.F = solution[46:52]
-        self._PURGE.F = solution[52:58]
-        self._PURGERATIO = solution[58]
+        self._PRODUCT.F = solution[30:36]
+        self._BOTTOMS.F = solution[36:42]
+        self._RECYCLE.F = solution[42:48]
+        self._PURGE.F = solution[48:54]
+        self._PURGERATIO = solution[54]
 
         Basics().mass_balance_check([self._FEED_A, self._FEED_B, self._RECYCLE], [self._REACOUT], by_species = False)
         Basics().mass_balance_check([self._REACOUT], [self._HEATEXOUT])
@@ -478,15 +483,14 @@ class Flowsheet():
         DATA_HEATEXOUT = DATA[12:18]
         DATA_DECANTOUT = DATA[18:24]
         DATA_WASTE = DATA[24:30]
-        DATA_xDECANTER = DATA[30:34]
-        DATA_HEAD = DATA[34:40]
-        DATA_BOT = DATA[40:46]
-        DATA_RECYCLE = DATA[46:52]
-        DATA_PURGE = DATA[52:58]
-        DATA_PURGERATIO = DATA[58]
+        DATA_HEAD = DATA[30:36]
+        DATA_BOT = DATA[36:42]
+        DATA_RECYCLE = DATA[42:48]
+        DATA_PURGE = DATA[48:54]
+        DATA_PURGERATIO = DATA[54]
 
         DATA_REACTOR = np.concatenate((DATA_REACOUT, DATA_wREAC))
-        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE, DATA_xDECANTER))
+        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE))
         DATA_DIST = np.concatenate((DATA_HEAD, DATA_BOT))
         DATA_SPLITTER = np.concatenate((DATA_RECYCLE, DATA_PURGE))
 
@@ -535,15 +539,14 @@ class Flowsheet():
         DATA_HEATEXOUT = DATA[12:18]
         DATA_DECANTOUT = DATA[18:24]
         DATA_WASTE = DATA[24:30]
-        DATA_xDECANTER = DATA[30:34]
-        DATA_HEAD = DATA[34:40]
-        DATA_BOT = DATA[40:46]
-        DATA_RECYCLE = DATA[46:52]
-        DATA_PURGE = DATA[52:58]
-        DATA_PURGERATIO = DATA[58]
+        DATA_HEAD = DATA[30:36]
+        DATA_BOT = DATA[36:42]
+        DATA_RECYCLE = DATA[42:48]
+        DATA_PURGE = DATA[48:54]
+        DATA_PURGERATIO = DATA[54]
 
         DATA_REACTOR = np.concatenate((DATA_REACOUT, DATA_wREAC))
-        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE, DATA_xDECANTER))
+        DATA_DECANTER = np.concatenate((DATA_DECANTOUT, DATA_WASTE))
         DATA_DIST = np.concatenate((DATA_HEAD, DATA_BOT))
         DATA_SPLITTER = np.concatenate((DATA_RECYCLE, DATA_PURGE))
 
@@ -584,24 +587,24 @@ class Flowsheet():
         Jacobian_Splitter_Feed = SPLITTER.Jacobian_Feed()
         Jacobian_Splitter_Ratio = SPLITTER.Jacobian_Ratio()
 
-        jacobian = np.zeros((59, 59))
+        jacobian = np.zeros((55, 55))
 
         jacobian[0:12, 0:12] = Jacobian_Reactor
-        jacobian[0:12, 46:52] = Jacobian_Reactor_Recycle
+        jacobian[0:12, 42:48] = Jacobian_Reactor_Recycle
 
         jacobian[12:18, 12:18] = Jacobian_HeatExchanger
         jacobian[12:18, 0:6] = Jacobian_HeatExchanger_Feed
 
-        jacobian[18:34, 18:34] = Jacobian_Decanter
-        jacobian[18:34, 12:18] = Jacobian_Decanter_Feed
+        jacobian[18:30, 18:30] = Jacobian_Decanter
+        jacobian[18:30, 12:18] = Jacobian_Decanter_Feed
 
-        jacobian[34:46, 34:46] = Jacobian_Distillation
-        jacobian[34:46, 18:24] = Jacobian_Distillation_Feed
+        jacobian[30:42, 30:42] = Jacobian_Distillation
+        jacobian[30:42, 18:24] = Jacobian_Distillation_Feed
 
-        jacobian[46:58, 46:58] = Jacobian_Splitter
-        jacobian[46:58, 40:46] = Jacobian_Splitter_Feed
+        jacobian[42:54, 42:54] = Jacobian_Splitter
+        jacobian[42:54, 36:42] = Jacobian_Splitter_Feed
 
-        jacobian[58, 38] = 1
-        jacobian[46:58, 58] = Jacobian_Splitter_Ratio
+        jacobian[54, 38] = 1
+        jacobian[42:54, 54] = Jacobian_Splitter_Ratio
 
         return jacobian

@@ -25,7 +25,7 @@ SOLVER_EO = "ArmijoLineSearch"
 
 class Solvers():
 
-    max_iterations = 100
+    max_iterations = 1000
 
     newton_e1 = 1e-4
     newton_e2 = 1e-9
@@ -33,15 +33,15 @@ class Solvers():
     gradientdescent_e1 = 1e-2
     gradientdescent_e2 = 1e-6
 
-    armijo_e1 = 1e-4
-    armijo_e2 = 1e-9
+    armijo_e1 = 1e-9
+    armijo_e2 = 1e-12
     armijo_gamma = 0.1
     armijo_delta = 0.1
     armijo_amin = 1e-15
 
     direct_e = 1e-6
 
-    wegstein_e = 1e-6
+    wegstein_e = 1e-9
     wegstein_wait = 2
     wegstein_wmin = 0
     wegstein_wmax = 5
