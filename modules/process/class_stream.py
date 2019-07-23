@@ -43,5 +43,5 @@ class Stream():
     def T(self, value):
         self._T = value
         if np.any(value < 300): raise Exception("Temperature too low")
-        if np.any(value > 1000): raise Exception("Temperature too large")
+        if np.any(value > 2000): raise Exception("Temperature too large")
 

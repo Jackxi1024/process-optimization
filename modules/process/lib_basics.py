@@ -79,7 +79,7 @@ class Basics():
     def np_to_pd(self, streams):
 
         index = ['FEED_A', 'FEED_B', 'REACOUT', 'HEATEXOUT', 'DECANTOUT', 'WASTE', 'HEAD', 'BOT', 'RECYCLE', 'PURGE']
-        columns = ['A', 'B', 'C', 'E', 'P', 'G']
+        columns = ['A', 'B', 'C', 'E', 'P', 'G', 'T']
 
         return pd.DataFrame(data = streams, index = index, columns = columns).to_string(float_format = "%0.2f")
 

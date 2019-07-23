@@ -1,9 +1,10 @@
 import numpy as np
 import logging
+import copy
 
-from modules.lib_basics import Basics
-from modules.class_stream import Stream
-from modules.lib_solvers import Solvers
+from process.lib_basics import Basics
+from process.class_stream import Stream
+from process.lib_solvers import Solvers
 
 CP_reactor = 2170 # in J/kgK
 CP_water = 4180 # in J/kgK
@@ -15,7 +16,7 @@ class Reactor():
     k3 = 258 # in 1/h
     V = 1e3 # in m^3
     p = 50 # in kg/m^3
-    DrH = 100 # in J/kg
+    DrH = 6000*1000 # in J/kg
 
     def __init__(self, FEED_A, FEED_B, RECYCLE):
         # set-up for logging of reactor. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -27,7 +28,7 @@ class Reactor():
         self.logger.debug("Reactor instance is initialised")
 
         # needed for system and jacobian functions to access data.
-        self._FEED_A = FEED_A; self._FEED_B = FEED_B; self._RECYCLE = RECYCLE;
+        self._FEED_A = copy.copy(FEED_A); self._FEED_B = copy.copy(FEED_B); self._RECYCLE = copy.copy(RECYCLE);
         self._TEMPERATURE = (FEED_A.Ftotal*FEED_A.T + FEED_B.Ftotal*FEED_B.T + RECYCLE.Ftotal*RECYCLE.T)/(FEED_A.Ftotal + FEED_B.Ftotal + RECYCLE.Ftotal)
 
 
@@ -59,8 +60,7 @@ class Reactor():
         # construct solution stream leaving the reactor and return it
         FEFF = Stream()
         FEFF.F = solution_flows
-        print(self._TEMPERATURE + self.DrH/CP_reactor*(self._FEED_A.F[0]+self._FEED_B.F[0]+self._RECYCLE.F[0]-FEFF.F[0]))
-        FEFF.T = self._TEMPERATURE + self.DrH/CP_reactor*(self._FEED_A.F[0]+self._FEED_B.F[0]+self._RECYCLE.F[0]-FEFF.F[0])
+        FEFF.T = self._TEMPERATURE + self.DrH/(FEFF.Ftotal*CP_reactor)*(self._FEED_A.F[0]+self._FEED_B.F[0]+self._RECYCLE.F[0]-FEFF.F[0])
 
         Basics().mass_balance_check([self._FEED_A, self._FEED_B, self._RECYCLE], [FEFF], by_species = False)
 
@@ -125,27 +125,6 @@ class Reactor():
         ])
 
 
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Feed(self):
-
-        # jacobian
-        return np.array([
-            [-1, 0, 0, 0, 0, 0],
-            [0, -1, 0, 0, 0, 0],
-            [0, 0, -1, 0, 0, 0],
-            [0, 0, 0, -1, 0, 0],
-            [0, 0, 0, 0, -1, 0],
-            [0, 0, 0, 0, 0, -1],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-        ])
-
-
-
 
 
 class HeatExchanger():
@@ -160,7 +139,7 @@ class HeatExchanger():
         self.logger.debug("HeatEx instance is initialised")
 
         # needed for system and jacobian functions to access data.
-        self._FEED = FEED
+        self._FEED = copy.copy(FEED)
         self._TEMPERATURE = FEED.T
 
 
@@ -172,65 +151,17 @@ class HeatExchanger():
 
 
    # calls the sequential approach for the heat exchanger
-    def SEQ(self):
+    def SEQ(self, Temperature):
 
         self.logger.debug("SEQ heat exchanger called")
 
         OUTFLOW = Stream()
         OUTFLOW = self._FEED
-        OUTFLOW.T = self._TEMPERATURE
+        OUTFLOW.T = Temperature
 
         Basics().mass_balance_check([self._FEED], [OUTFLOW])
 
         return OUTFLOW
-
-
-    # returns the solution vector of the system of equations given the values in DATA
-    def System(self, DATA):
-
-        # reassign values to local vars to make the equations more readable
-        FeffA = DATA[0]; FeffB = DATA[1]; FeffC = DATA[2]; FeffE = DATA[3]; FeffP = DATA[4]; FeffG = DATA[5];
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-
-        # system of equations
-        return np.array([
-            FeffA - FA,
-            FeffB - FB,
-            FeffC - FC,
-            FeffE - FE,
-            FeffP - FP,
-            FeffG - FG
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian(self, DATA):
-
-        # jacobian
-        return np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 1]
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Feed(self):
-
-        # jacobian
-        return np.array([
-            [-1, 0, 0, 0, 0, 0],
-            [0, -1, 0, 0, 0, 0],
-            [0, 0, -1, 0, 0, 0],
-            [0, 0, 0, -1, 0, 0],
-            [0, 0, 0, 0, -1, 0],
-            [0, 0, 0, 0, 0, -1]
-        ])
-
-
 
 
 
@@ -247,7 +178,7 @@ class Decanter():
         self.logger.debug("Decanter instance is initialised")
 
         # needed for system and jacobian functions to access data.
-        self._FEED = FEED
+        self._FEED = copy.copy(FEED)
         self._TEMPERATURE = FEED.T
 
 
@@ -298,7 +229,7 @@ class Decanter():
         FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
 
         temp_factor_P = 0.3*(1-np.exp(-0.0025*(self._TEMPERATURE-300)))
-        temp_factor_G = 0.95*(1-np.exp(-0.0015*(self._TEMPERATURE-300)))
+        temp_factor_G = 0.95*np.exp(-0.0015*(self._TEMPERATURE-300))
 
         # system of equations
         return np.array([
@@ -312,7 +243,7 @@ class Decanter():
             FwasteE,
             FoutP + FwasteP - FP,
             FoutG + FwasteG - FG,
-            FwasteP - temp_factor_P*FP - 0.05*FwasteG,
+            FwasteP - temp_factor_P*FP - 0.05*FwasteG + 0.2*temp_factor_P*(FA+FB),
             FwasteG - temp_factor_G*FG + 0.05*FoutE
         ])
 
@@ -340,33 +271,6 @@ class Decanter():
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -0.05],
             [0, 0, 0, 0.05, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Feed(self):
-
-        temp_factor_P = 0.3*(1-np.exp(-0.0025*(self._TEMPERATURE-300)))
-        temp_factor_G = 0.95*(1-np.exp(-0.0015*(self._TEMPERATURE-300)))
-
-        # jacobian
-        return np.array([
-            [-1, 0, 0, 0, 0, 0],
-            [0, -1, 0, 0, 0, 0],
-            [0, 0, -1, 0, 0, 0],
-            [0, 0, 0, -1, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, -1, 0],
-            [0, 0, 0, 0, 0, -1],
-            [0, 0, 0, 0,-temp_factor_P, 0],
-            [0, 0, 0, 0, 0, temp_factor_G]
-        ])
-
-
-
-
-
 
 
 
@@ -419,90 +323,12 @@ class DistillationColumn():
         BOTTOM = Stream()
         HEAD.F = head_flows
         BOTTOM.F = bottom_flows
-        HEAD.T = self._TEMPERATURE + 0.5*(1000 - self._TEMPERATURE)
-        BOTTOM.T = self._TEMPERATURE - 0.5*(self._TEMPERATURE - 300)
+        HEAD.T = self._TEMPERATURE + 0.5*(800 - self._TEMPERATURE)
+        BOTTOM.T = self._TEMPERATURE - 0.5*(self._TEMPERATURE - 500)
 
         Basics().mass_balance_check([self._FEED], [HEAD, BOTTOM])
 
         return HEAD, BOTTOM
-
-
-    # returns the solution vector of the system of equations given the values in DATA
-    def System(self, DATA):
-
-        # reassign values to local vars to make the equations more readable
-        FheadA = DATA[0]; FheadB = DATA[1]; FheadC = DATA[2]; FheadE = DATA[3]; FheadP = DATA[4]; FheadG = DATA[5];
-        FbotA = DATA[6]; FbotB = DATA[7]; FbotC = DATA[8]; FbotE = DATA[9]; FbotP = DATA[10]; FbotG = DATA[11];
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-
-        # system of equations
-        return np.array([
-            FheadA - 1,
-            FheadB - 1000/FA,
-            FheadC - 10*FC/(FC+FE),
-            FheadE - 50*FE/(FE+FP),
-            FheadP - (FP - 0.1*(1-50/(FE+FP))*FE),
-            FheadG - FG/(FP+FG),
-            FbotA - FA + 1,
-            FbotB - FB + 1000/FA,
-            FbotC - FC + 10*FC/(FC+FE),
-            FbotE - FE + 50*FE/(FE+FP),
-            FbotP - 0.1*(1-50/(FE+FP))*FE,
-            FbotG - FG + FG/(FP+FG)
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian(self, DATA):
-
-        # reassign values to local vars to make the equations more readable
-        FheadA = DATA[0]; FheadB = DATA[1]; FheadC = DATA[2]; FheadE = DATA[3]; FheadP = DATA[4]; FheadG = DATA[5];
-        FbotA = DATA[6]; FbotB = DATA[7]; FbotC = DATA[8]; FbotE = DATA[9]; FbotP = DATA[10]; FbotG = DATA[11];
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-
-        # jacobian
-        return np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Feed(self):
-
-        # reassign values to local vars to make the equations more readable
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-
-
-        # jacobian
-        return np.array([
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 1000/(FC**2), 0, 0, 0],
-            [0, 0, -10*FE/((FC+FE)**2), 10*FC/((FC+FE)**2), 0, 0],
-            [0, 0, 0, -50*FP/((FE+FP)**2), 50*FE/((FE+FP)**2), 0],
-            [0, 0, 0, 0.1-5/(FE+FP)+5*FE/((FE+FP)**2), 5*FE/((FP+FE)**2)-1, 0],
-            [0, 0, 0, 0, FG/((FP+FG)**2), -FP/((FP+FG)**2)],
-            [-1, 0, 0, 0, 0, 0],
-            [-1000/(FA**2), -1, 0, 0, 0, 0],
-            [0, 0, 10/(FC+FE)-10*FC/((FC+FE)**2)-1, -10*FC/((FE+FC)**2), 0, 0],
-            [0, 0, 0, 50/(FE+FP)-50*FE/((FE+FP)**2)-1, -50*FE/((FE+FP)**2), 0],
-            [0, 0, 0, 5/(FE+FP)-5*FE/((FE+FP)**2)-0.1, -5*FE/((FP+FE)**2), 0],
-            [0, 0, 0, 0, -FG/((FP+FG)**2), 1/(FP+FG)-FG/((FP+FG)**2)-1]
-        ])
-
-
-
-
 
 
 
@@ -524,7 +350,7 @@ class Splitter():
         self._FEED = FEED
         self._TEMPERATURE = FEED.T
         if PURGERATIO < 0.001: PURGERATIO = 0.001
-        if PURGERATIO > 0.999: PURGERATIO = 0.999
+        if PURGERATIO > 1: PURGERATIO = 1
         self._PURGERATIO = PURGERATIO
 
 
@@ -564,101 +390,3 @@ class Splitter():
         Basics().mass_balance_check([self._FEED], [RECYCLE, PURGE])
 
         return RECYCLE, PURGE
-
-
-    # returns the solution vector of the system of equations given the values in DATA
-    def System(self, DATA):
-
-        # reassign values to local vars to make the equations more readable
-        FrecA = DATA[0]; FrecB = DATA[1]; FrecC = DATA[2]; FrecE = DATA[3]; FrecP = DATA[4]; FrecG = DATA[5];
-        FpurgeA = DATA[6]; FpurgeB = DATA[7]; FpurgeC = DATA[8]; FpurgeE = DATA[9]; FpurgeP = DATA[10]; FpurgeG = DATA[11];
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-        n = self._PURGERATIO
-
-        # system of equations
-        return np.array([
-            FrecA - (1-n)*FA,
-            FrecB - (1-n)*FB,
-            FrecC - (1-n)*FC,
-            FrecE - (1-n)*FE,
-            FrecP - (1-n)*FP,
-            FrecG - 0,
-            FpurgeA - n*FA,
-            FpurgeB - n*FB,
-            FpurgeC - n*FC,
-            FpurgeE - n*FE,
-            FpurgeP - n*FP,
-            FpurgeG - FG
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian(self, DATA):
-
-        # reassign values to local vars to make the equations more readable
-        FrecA = DATA[0]; FrecB = DATA[1]; FrecC = DATA[2]; FrecE = DATA[3]; FrecP = DATA[4]; FrecG = DATA[5];
-        FpurgeA = DATA[6]; FpurgeB = DATA[7]; FpurgeC = DATA[8]; FpurgeE = DATA[9]; FpurgeP = DATA[10]; FpurgeG = DATA[11];
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-        n = self._PURGERATIO
-
-        # jacobian
-        return np.array([
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Ratio(self):
-
-        # reassign values to local vars to make the equations more readable
-        FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
-
-        # jacobian
-        return np.array([
-            FA,
-            FB,
-            FC,
-            FE,
-            FP,
-            0,
-            -FA,
-            -FB,
-            -FC,
-            -FE,
-            -FP,
-            0
-        ])
-
-
-    # returns the values of the jacobian matrix for the system of equations given the values in DATA
-    def Jacobian_Feed(self):
-
-        n = self._PURGERATIO
-
-        # jacobian
-        return np.array([
-            [-(1-n), 0, 0, 0, 0, 0],
-            [0, -(1-n), 0, 0, 0, 0],
-            [0, 0, -(1-n), 0, 0, 0],
-            [0, 0, 0, -(1-n), 0, 0],
-            [0, 0, 0, 0, -(1-n), 0],
-            [0, 0, 0, 0, 0, 0],
-            [-n, 0, 0, 0, 0, 0],
-            [0, -n, 0, 0, 0, 0],
-            [0, 0, -n, 0, 0, 0],
-            [0, 0, 0, -n, 0, 0],
-            [0, 0, 0, 0, -n, 0],
-            [0, 0, 0, 0, 0, -1],
-        ])
-
