@@ -1,10 +1,10 @@
 import numpy as np
 import logging
 
-from process.lib_basics import Basics
-from process.class_stream import Stream
-from process.lib_solvers import Solvers
-from process.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
+from modules.process.lib_basics import Basics
+from modules.process.class_stream import Stream
+from modules.process.lib_solvers import Solvers
+from modules.process.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
 
 DEBUG = False
 T_GUESS = 350

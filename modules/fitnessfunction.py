@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 
-from process.lib_basics import Basics
-from process.lib_solvers import Solvers
-from process.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
-from process.class_stream import Stream
-from process.class_flowsheet import Flowsheet
+from modules.process.lib_basics import Basics
+from modules.process.lib_solvers import Solvers
+from modules.process.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
+from modules.process.class_stream import Stream
+from modules.process.class_flowsheet import Flowsheet
 
 
 
@@ -36,6 +36,46 @@ class Fitnessfunction():
         self.logger.setLevel(self.loglevel)
 
         self.logger.debug("Main instance is initialised")
+
+
+    
+    def run_normalized(self, paramset):
+
+        PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 = paramset
+
+        if np.any(np.array([PARAM1, PARAM2, PARAM3, PARAM4, PARAM5]) > 1) | np.any(np.array([PARAM1, PARAM2, PARAM3, PARAM4, PARAM5]) < 0):
+            self.logger.info("Parameter set  (%1.2f, %1.2f, %1.2f, %1.2f, %1.2f) exceeded bounds." % (PARAM1, PARAM2, PARAM3, PARAM4, PARAM5))
+            return 1e12, -1e12, 1e12
+
+        PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 = self.unnormalized_parameters(paramset)
+        try:
+            capex, roi, energy_used = self.run(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5)
+        except Exception as e:
+            self.logger.error("Fitness evaluation with (%1.2f, %1.2f, %1.2f, %1.2f, %1.2f) failed." % (PARAM1, PARAM2, PARAM3, PARAM4, PARAM5))
+            capex, roi, energy_used = 1e12, -1e12, 1e12
+        return capex/1e6, roi, energy_used/1e11
+
+
+    def unnormalized_parameters(self, paramset):
+
+        PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 = paramset
+
+        bounds = [
+            [10000, 40000],
+            [0.1, 0.6],
+            [300, 1000],
+            [300, 800],
+            [0.2, 1.0]
+        ]
+
+        FEED = bounds[0][0] + PARAM1*(bounds[0][1]-bounds[0][0])
+        EDUCT_RATIO = bounds[1][0] + PARAM1*(bounds[1][1]-bounds[1][0])
+        EDUCT_T = bounds[2][0] + PARAM1*(bounds[2][1]-bounds[2][0])
+        HEATEX_T = bounds[3][0] + PARAM1*(bounds[3][1]-bounds[3][0])
+        PURGE_RATIO = bounds[4][0] + PARAM1*(bounds[4][1]-bounds[4][0])
+
+        return FEED, EDUCT_RATIO, EDUCT_T, HEATEX_T, PURGE_RATIO
+
 
 
     def run(self, FEED, EDUCT_RATIO, EDUCT_T, HEATEX_T, PURGE_RATIO):
@@ -93,7 +133,7 @@ class Fitnessfunction():
         Process.SEQ_Setup(tearstream = TEAR_STREAM)
         data = Process.SEQ_Start()
 
-        print(data)
+        # print(data)
 
         del Process
 
@@ -160,15 +200,15 @@ class Fitnessfunction():
         opex.append(sum(opex))
         energy_used.append(sum(energy_used))
 
-        result = pd.DataFrame(np.transpose(np.array([capex, opex, energy_used])), index=["REAC", "HEATEX1", "DECANT", "DIST", "PURGE", "HEATEX2", "A", "B", "P", "SUM"], columns=["CAPEX", "OPEX", "ENERGY"])
-        print(result)
+        # result = pd.DataFrame(np.transpose(np.array([capex, opex, energy_used])), index=["REAC", "HEATEX1", "DECANT", "DIST", "PURGE", "HEATEX2", "A", "B", "P", "SUM"], columns=["CAPEX", "OPEX", "ENERGY"])
+        # print(result)
 
         capex = sum(capex)
         opex = 500000 + sum(opex)
         energy_used = sum(energy_used)
         roi = -(sum(materials)+opex)/capex
 
-        print(roi)
+        # print(roi)
 
         return capex, roi, energy_used
 
@@ -178,6 +218,7 @@ if __name__ == "__main__":
 
     # invoke main class
     Program = Fitnessfunction()
+    Program.run_normalized(0.5, 0.5, 0.5, 0.5, 1.5)
     # Program.run(21500, 0.3, 550, 450, .2)
     # Program.run(21500, 0.3, 550, 450, .5)
     # Program.run(21500, 0.3, 550, 450, 1)

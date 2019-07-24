@@ -2,7 +2,7 @@ import numpy as np
 import logging
 
 
-from process.lib_basics import Basics
+from modules.process.lib_basics import Basics
 
 
 #

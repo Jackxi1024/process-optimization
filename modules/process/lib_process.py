@@ -2,9 +2,9 @@ import numpy as np
 import logging
 import copy
 
-from process.lib_basics import Basics
-from process.class_stream import Stream
-from process.lib_solvers import Solvers
+from modules.process.lib_basics import Basics
+from modules.process.class_stream import Stream
+from modules.process.lib_solvers import Solvers
 
 CP_reactor = 2170 # in J/kgK
 CP_water = 4180 # in J/kgK
