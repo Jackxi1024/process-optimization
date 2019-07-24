@@ -6,12 +6,12 @@ from process.class_stream import Stream
 from process.lib_solvers import Solvers
 from process.lib_process import Reactor, HeatExchanger, Decanter, DistillationColumn, Splitter
 
-DEBUG = True
+DEBUG = False
 T_GUESS = 350
 
 class Flowsheet():
 
-    def __init__(self, FEED_A, FEED_B, GUESSES, PURGERATIO, HEATEX_T):
+    def __init__(self, FEED_A, FEED_B, GUESSES, PURGERATIO, EDUCT_T, HEATEX_T):
         # set-up for logging of flowsheet. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
         self.loglevel = logging.INFO
         self.logtitle = 'Flowsheet'
@@ -22,10 +22,10 @@ class Flowsheet():
 
         self._FEED_A = Stream()
         self._FEED_A.F = FEED_A.F
-        self._FEED_A.T = T_GUESS
+        self._FEED_A.T = EDUCT_T
         self._FEED_B = Stream()
         self._FEED_B.F = FEED_B.F
-        self._FEED_B.T = T_GUESS
+        self._FEED_B.T = EDUCT_T
         self._RECYCLE = Stream()
         self._RECYCLE.F = GUESSES['RECYCLE']
         self._RECYCLE.T = T_GUESS
@@ -71,7 +71,7 @@ class Flowsheet():
             np.concatenate((self._BOTTOMS.F, np.array([self._BOTTOMS.T]))),
             np.concatenate((self._RECYCLE.F, np.array([self._RECYCLE.T]))),
             np.concatenate((self._PURGE.F, np.array([self._PURGE.T])))
-        ]))
+        ]).to_string(float_format = "%0.2f"))
 
         print("")
 
@@ -114,7 +114,7 @@ class Flowsheet():
             return None
         
         solution, stats = Solvers().solve(system = self.SEQ_System, guess = self._TEARSTREAM.F, category = 'TearStream')
-        self.logger.info("Converged tear stream in "+str(stats["Iterations"])+" iterations.")
+        self.logger.debug("Converged tear stream in "+str(stats["Iterations"])+" iterations.")
         Basics().TrackPerformance(stats, 'TearStream')
 
         self._TEARSTREAM.F = solution

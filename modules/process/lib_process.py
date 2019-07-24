@@ -20,7 +20,7 @@ class Reactor():
 
     def __init__(self, FEED_A, FEED_B, RECYCLE):
         # set-up for logging of reactor. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-        self.loglevel = logging.INFO
+        self.loglevel = logging.WARNING
         self.logtitle = 'Reactor'
         self.logger = logging.getLogger(self.logtitle)
         self.logger.setLevel(self.loglevel)
@@ -31,6 +31,11 @@ class Reactor():
         self._FEED_A = copy.copy(FEED_A); self._FEED_B = copy.copy(FEED_B); self._RECYCLE = copy.copy(RECYCLE);
         self._TEMPERATURE = (FEED_A.Ftotal*FEED_A.T + FEED_B.Ftotal*FEED_B.T + RECYCLE.Ftotal*RECYCLE.T)/(FEED_A.Ftotal + FEED_B.Ftotal + RECYCLE.Ftotal)
 
+        self.k1 = self.k1*(1+0.3*np.exp(0.01*(self._TEMPERATURE-400)))
+        self.k2 = self.k2*(1+0.2*np.exp(0.01*(self._TEMPERATURE-400)))
+        self.k3 = self.k3*(1+1*np.exp(0.02*(self._TEMPERATURE-600)))
+
+        # print(self.k1, self.k2, self.k3)
 
     def __del__(self):
         self.logger.debug("Reactor instance is closed")
@@ -131,7 +136,7 @@ class HeatExchanger():
 
     def __init__(self, FEED):
         # set-up for logging of heat exchanger. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-        self.loglevel = logging.INFO
+        self.loglevel = logging.WARNING
         self.logtitle = 'HeatEx'
         self.logger = logging.getLogger(self.logtitle)
         self.logger.setLevel(self.loglevel)
@@ -170,7 +175,7 @@ class Decanter():
 
     def __init__(self, FEED):
         # set-up for logging of decanter. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-        self.loglevel = logging.INFO
+        self.loglevel = logging.WARNING
         self.logtitle = 'Decanter'
         self.logger = logging.getLogger(self.logtitle)
         self.logger.setLevel(self.loglevel)
@@ -228,8 +233,11 @@ class Decanter():
         FwasteA = DATA[6]; FwasteB = DATA[7]; FwasteC = DATA[8]; FwasteE = DATA[9]; FwasteP = DATA[10]; FwasteG = DATA[11];
         FA = self._FEED.F[0]; FB = self._FEED.F[1]; FC = self._FEED.F[2]; FE = self._FEED.F[3]; FP = self._FEED.F[4]; FG = self._FEED.F[5];
 
-        temp_factor_P = 0.3*(1-np.exp(-0.0025*(self._TEMPERATURE-300)))
-        temp_factor_G = 0.95*np.exp(-0.0015*(self._TEMPERATURE-300))
+        temp_factor_P = 0.3*(1-np.exp(-0.005*(self._TEMPERATURE-300)))
+        temp_factor_G = 0.95*np.exp(-0.003*(self._TEMPERATURE-300))
+        temp_factor_2 = max(1-np.exp(-0.005*(self._TEMPERATURE-400)), 0.2)
+
+        # print(FwasteP, FwasteG, temp_factor_P, temp_factor_G)
 
         # system of equations
         return np.array([
@@ -243,8 +251,8 @@ class Decanter():
             FwasteE,
             FoutP + FwasteP - FP,
             FoutG + FwasteG - FG,
-            FwasteP - temp_factor_P*FP - 0.05*FwasteG + 0.2*temp_factor_P*(FA+FB),
-            FwasteG - temp_factor_G*FG + 0.05*FoutE
+            FwasteP - temp_factor_P*temp_factor_2*FP - 0.01*FwasteG + 0.015*temp_factor_P*(FA+FB),
+            FwasteG - temp_factor_G*FG + 0.01*FoutE
         ])
 
 
@@ -268,8 +276,8 @@ class Decanter():
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0],
             [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -0.05],
-            [0, 0, 0, 0.05, 0, 0, 0, 0, 0, 0, 0, 1]
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -0.01],
+            [0, 0, 0, 0.01, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
 
 
@@ -281,7 +289,7 @@ class DistillationColumn():
 
     def __init__(self, FEED):
         # set-up for logging of distillation column. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-        self.loglevel = logging.INFO
+        self.loglevel = logging.WARNING
         self.logtitle = 'Distillation'
         self.logger = logging.getLogger(self.logtitle)
         self.logger.setLevel(self.loglevel)
@@ -313,7 +321,7 @@ class DistillationColumn():
             1000/FA,
             10*FC/(FC+FE),
             50*FE/(FE+FP),
-            FP-0.1*(1-50/(FE+FP))*FE,
+            max(FP-0.05*FE, 0),
             FG/(FP+FG)
         ])
 
@@ -339,7 +347,7 @@ class Splitter():
 
     def __init__(self, FEED, PURGERATIO):
         # set-up for logging of splitter. Level options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-        self.loglevel = logging.INFO
+        self.loglevel = logging.WARNING
         self.logtitle = 'Splitter'
         self.logger = logging.getLogger(self.logtitle)
         self.logger.setLevel(self.loglevel)
