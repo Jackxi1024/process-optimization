@@ -69,10 +69,10 @@ class Fitnessfunction():
         ]
 
         FEED = bounds[0][0] + PARAM1*(bounds[0][1]-bounds[0][0])
-        EDUCT_RATIO = bounds[1][0] + PARAM1*(bounds[1][1]-bounds[1][0])
-        EDUCT_T = bounds[2][0] + PARAM1*(bounds[2][1]-bounds[2][0])
-        HEATEX_T = bounds[3][0] + PARAM1*(bounds[3][1]-bounds[3][0])
-        PURGE_RATIO = bounds[4][0] + PARAM1*(bounds[4][1]-bounds[4][0])
+        EDUCT_RATIO = bounds[1][0] + PARAM2*(bounds[1][1]-bounds[1][0])
+        EDUCT_T = bounds[2][0] + PARAM3*(bounds[2][1]-bounds[2][0])
+        HEATEX_T = bounds[3][0] + PARAM4*(bounds[3][1]-bounds[3][0])
+        PURGE_RATIO = bounds[4][0] + PARAM5*(bounds[4][1]-bounds[4][0])
 
         return FEED, EDUCT_RATIO, EDUCT_T, HEATEX_T, PURGE_RATIO
 
@@ -211,14 +211,3 @@ class Fitnessfunction():
         # print(roi)
 
         return capex, roi, energy_used
-
-
-
-if __name__ == "__main__":
-
-    # invoke main class
-    Program = Fitnessfunction()
-    Program.run_normalized(0.5, 0.5, 0.5, 0.5, 1.5)
-    # Program.run(21500, 0.3, 550, 450, .2)
-    # Program.run(21500, 0.3, 550, 450, .5)
-    # Program.run(21500, 0.3, 550, 450, 1)

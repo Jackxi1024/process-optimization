@@ -38,7 +38,7 @@ def main():
 
 def fitness(data):
     a, b, c = FITNESSFUNCTION.run_normalized(data)
-    return -a
+    return b
 
 
 
@@ -49,6 +49,16 @@ def fitness(data):
 if __name__ == "__main__":
     
     main()
+
+    # Program = Fitnessfunction()
+    # Program.run_normalized([0.3329, 0.6000, 0.6000, 0.6000, 0.5000])
+    # print("\n\n")
+    # Program.run_normalized([0.3329, 0.5300, 0.6000, 0.6000, 0.5000])
+    # print("\n\n")
+    # Program.run_normalized([0.3329, 0.4700, 0.6000, 0.6000, 0.5000])
+
+
+
 
 
 
