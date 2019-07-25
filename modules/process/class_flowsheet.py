@@ -61,16 +61,16 @@ class Flowsheet():
         
         print("#################################\nSOLUTION (streams in lb/hr)\n#################################\n")
         print(Basics().np_to_pd([
-            np.concatenate((self._FEED_A.F, np.array([self._FEED_A.T]))),
-            np.concatenate((self._FEED_B.F, np.array([self._FEED_B.T]))),
-            np.concatenate((self._REACOUT.F, np.array([self._REACOUT.T]))),
-            np.concatenate((self._HEATEXOUT.F, np.array([self._HEATEXOUT.T]))),
-            np.concatenate((self._DECANTEROUT.F, np.array([self._DECANTEROUT.T]))),
-            np.concatenate((self._WASTE.F, np.array([self._WASTE.T]))),
-            np.concatenate((self._PRODUCT.F, np.array([self._PRODUCT.T]))),
-            np.concatenate((self._BOTTOMS.F, np.array([self._BOTTOMS.T]))),
-            np.concatenate((self._RECYCLE.F, np.array([self._RECYCLE.T]))),
-            np.concatenate((self._PURGE.F, np.array([self._PURGE.T])))
+            np.concatenate((self._FEED_A.F, np.array([self._FEED_A.T]), np.array([self._FEED_A.Ftotal]))),
+            np.concatenate((self._FEED_B.F, np.array([self._FEED_B.T]), np.array([self._FEED_B.Ftotal]))),
+            np.concatenate((self._REACOUT.F, np.array([self._REACOUT.T]), np.array([self._REACOUT.Ftotal]))),
+            np.concatenate((self._HEATEXOUT.F, np.array([self._HEATEXOUT.T]), np.array([self._HEATEXOUT.Ftotal]))),
+            np.concatenate((self._DECANTEROUT.F, np.array([self._DECANTEROUT.T]), np.array([self._DECANTEROUT.Ftotal]))),
+            np.concatenate((self._WASTE.F, np.array([self._WASTE.T]), np.array([self._WASTE.Ftotal]))),
+            np.concatenate((self._PRODUCT.F, np.array([self._PRODUCT.T]), np.array([self._PRODUCT.Ftotal]))),
+            np.concatenate((self._BOTTOMS.F, np.array([self._BOTTOMS.T]), np.array([self._BOTTOMS.Ftotal]))),
+            np.concatenate((self._RECYCLE.F, np.array([self._RECYCLE.T]), np.array([self._RECYCLE.Ftotal]))),
+            np.concatenate((self._PURGE.F, np.array([self._PURGE.T]), np.array([self._PURGE.Ftotal])))
         ]).to_string(float_format = "%0.2f"))
 
         print("")
@@ -125,16 +125,16 @@ class Flowsheet():
             self.print_Solution()
 
         return Basics().np_to_pd([
-            np.concatenate((self._FEED_A.F, np.array([self._FEED_A.T]))),
-            np.concatenate((self._FEED_B.F, np.array([self._FEED_B.T]))),
-            np.concatenate((self._REACOUT.F, np.array([self._REACOUT.T]))),
-            np.concatenate((self._HEATEXOUT.F, np.array([self._HEATEXOUT.T]))),
-            np.concatenate((self._DECANTEROUT.F, np.array([self._DECANTEROUT.T]))),
-            np.concatenate((self._WASTE.F, np.array([self._WASTE.T]))),
-            np.concatenate((self._PRODUCT.F, np.array([self._PRODUCT.T]))),
-            np.concatenate((self._BOTTOMS.F, np.array([self._BOTTOMS.T]))),
-            np.concatenate((self._RECYCLE.F, np.array([self._RECYCLE.T]))),
-            np.concatenate((self._PURGE.F, np.array([self._PURGE.T])))
+            np.concatenate((self._FEED_A.F, np.array([self._FEED_A.T]), np.array([self._FEED_A.Ftotal]))),
+            np.concatenate((self._FEED_B.F, np.array([self._FEED_B.T]), np.array([self._FEED_B.Ftotal]))),
+            np.concatenate((self._REACOUT.F, np.array([self._REACOUT.T]), np.array([self._REACOUT.Ftotal]))),
+            np.concatenate((self._HEATEXOUT.F, np.array([self._HEATEXOUT.T]), np.array([self._HEATEXOUT.Ftotal]))),
+            np.concatenate((self._DECANTEROUT.F, np.array([self._DECANTEROUT.T]), np.array([self._DECANTEROUT.Ftotal]))),
+            np.concatenate((self._WASTE.F, np.array([self._WASTE.T]), np.array([self._WASTE.Ftotal]))),
+            np.concatenate((self._PRODUCT.F, np.array([self._PRODUCT.T]), np.array([self._PRODUCT.Ftotal]))),
+            np.concatenate((self._BOTTOMS.F, np.array([self._BOTTOMS.T]), np.array([self._BOTTOMS.Ftotal]))),
+            np.concatenate((self._RECYCLE.F, np.array([self._RECYCLE.T]), np.array([self._RECYCLE.Ftotal]))),
+            np.concatenate((self._PURGE.F, np.array([self._PURGE.T]), np.array([self._PURGE.Ftotal])))
         ])
 
 

@@ -50,12 +50,12 @@ if __name__ == "__main__":
     
     main()
 
-    # Program = Fitnessfunction()
-    # Program.run_normalized([0.3329, 0.6000, 0.6000, 0.6000, 0.5000])
-    # print("\n\n")
-    # Program.run_normalized([0.3329, 0.5300, 0.6000, 0.6000, 0.5000])
-    # print("\n\n")
-    # Program.run_normalized([0.3329, 0.4700, 0.6000, 0.6000, 0.5000])
+    Program = Fitnessfunction()
+    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.8000])
+    print("\n\n")
+    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.9000])
+    print("\n\n")
+    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 1.0000])
 
 
 

@@ -25,8 +25,8 @@ class NelderMead():
     sigma = 0.5
 
     max_iterations = 1000
-    parameter_threshold = 1e-8
-    fitness_threshold = 1e-40
+    parameter_threshold = 1e-6
+    fitness_threshold = 1e-12
     repetition_threshold = 25
     random_restarts = 0
 
@@ -63,7 +63,6 @@ class NelderMead():
         while iterations <= self.max_iterations: 
 
             iterations += 1
-            print(iterations)
             data = data[data[:,self.dimension].argsort()[::-1]]
 
 
@@ -86,6 +85,8 @@ class NelderMead():
             else:
                 best_result_repetitions = 0
                 best_result = data[0, 0:self.dimension+1]
+
+            self.logger.info(("Iteration %1.0f with (" + ', '.join(['%1.3f']*(self.dimension+1)) + ").") % ((iterations,) + tuple(best_result)))
 
             p_bary = np.mean(data[0:self.dimension, 0:self.dimension], axis=0)
             p_worst = data[self.dimension, 0:self.dimension]

@@ -13,7 +13,7 @@ from modules.process.lib_process import Reactor, HeatExchanger, Decanter, Distil
 from modules.process.class_stream import Stream
 from modules.process.class_flowsheet import Flowsheet
 
-
+DEBUG = False
 
 
 class Fitnessfunction():
@@ -52,6 +52,7 @@ class Fitnessfunction():
             capex, roi, energy_used = self.run(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5)
         except Exception as e:
             self.logger.error("Fitness evaluation with (%1.2f, %1.2f, %1.2f, %1.2f, %1.2f) failed." % (PARAM1, PARAM2, PARAM3, PARAM4, PARAM5))
+            self.logger.error(e)
             capex, roi, energy_used = 1e12, -1e12, 1e12
         return capex/1e6, roi, energy_used/1e11
 
@@ -133,7 +134,7 @@ class Fitnessfunction():
         Process.SEQ_Setup(tearstream = TEAR_STREAM)
         data = Process.SEQ_Start()
 
-        # print(data)
+        if DEBUG: print(data)
 
         del Process
 
@@ -150,7 +151,7 @@ class Fitnessfunction():
         # reactor
         flow = data.loc["REACOUT", species].sum()
         capex.append(60*flow)
-        opex.append(10*flow + 0.002*(flow-30000)**2)
+        opex.append(10*flow + 0.02*(flow-35000)**2)
         energy_used.append(0)
         
         # heatex
@@ -176,7 +177,7 @@ class Fitnessfunction():
 
         # purge
         capex.append(0)
-        opex.append(10*data.loc["PURGE", species].sum())
+        opex.append(1*data.loc["PURGE", species].sum()+5e6*PURGE_RATIO**2)
         energy_used.append(0.25*3600000*data.loc["PURGE", species].sum())
 
         # heatex
@@ -200,14 +201,15 @@ class Fitnessfunction():
         opex.append(sum(opex))
         energy_used.append(sum(energy_used))
 
-        # result = pd.DataFrame(np.transpose(np.array([capex, opex, energy_used])), index=["REAC", "HEATEX1", "DECANT", "DIST", "PURGE", "HEATEX2", "A", "B", "P", "SUM"], columns=["CAPEX", "OPEX", "ENERGY"])
-        # print(result)
+        if DEBUG:
+            result = pd.DataFrame(np.transpose(np.array([capex, opex, energy_used])), index=["REAC", "HEATEX1", "DECANT", "DIST", "PURGE", "HEATEX2", "A", "B", "P", "SUM"], columns=["CAPEX", "OPEX", "ENERGY"])
+            print(result)
 
         capex = sum(capex)
         opex = 500000 + sum(opex)
         energy_used = sum(energy_used)
         roi = -(sum(materials)+opex)/capex
 
-        # print(roi)
+        if DEBUG: print(roi)
 
         return capex, roi, energy_used
