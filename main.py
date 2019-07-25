@@ -38,7 +38,8 @@ def main():
 
 def fitness(data):
     a, b, c = FITNESSFUNCTION.run_normalized(data)
-    return b
+    LOGGER.info("CAPEX: %1.4f, ROI: %1.4f" % (a, b))
+    return -0.25*a+0.75*b
 
 
 
@@ -50,12 +51,12 @@ if __name__ == "__main__":
     
     main()
 
-    Program = Fitnessfunction()
-    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.8000])
-    print("\n\n")
-    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.9000])
-    print("\n\n")
-    Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 1.0000])
+    # Program = Fitnessfunction()
+    # Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.8000])
+    # print("\n\n")
+    # Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 0.9000])
+    # print("\n\n")
+    # Program.run_normalized([0.9400, 0.2500, 0.3200, 0.0000, 1.0000])
 
 
 

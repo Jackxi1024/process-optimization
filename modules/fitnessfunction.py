@@ -209,6 +209,7 @@ class Fitnessfunction():
         opex = 500000 + sum(opex)
         energy_used = sum(energy_used)
         roi = -(sum(materials)+opex)/capex
+        profit = -(sum(materials)+opex)
 
         if DEBUG: print(roi)
 
