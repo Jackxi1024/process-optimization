@@ -25,7 +25,7 @@ class NelderMead():
     sigma = 0.5
 
     max_iterations = 1000
-    parameter_threshold = 1e-6
+    parameter_threshold = 1e-8
     fitness_threshold = 1e-12
     repetition_threshold = 25
     random_restarts = 0
@@ -90,12 +90,12 @@ class NelderMead():
 
             p_bary = np.mean(data[0:self.dimension, 0:self.dimension], axis=0)
             p_worst = data[self.dimension, 0:self.dimension]
-            p_1 = p_bary + self.alpha*(p_bary-p_worst)
+            p_1 = self.limitPoints(p_bary + self.alpha*(p_bary-p_worst))
             F_best = data[0, self.dimension]
             F_p1 = self.fitnessfunction(p_1)
 
             if F_p1 > F_best:
-                p_2 = p_bary + self.beta*(p_bary-p_worst)
+                p_2 = self.limitPoints(p_bary + self.beta*(p_bary-p_worst))
                 F_p2 = self.fitnessfunction(p_2)
 
                 if F_p2 > F_p1:
@@ -120,7 +120,7 @@ class NelderMead():
             else:
                 p_better = p_worst
 
-            p_3 = p_better + self.gamma*(p_bary-p_better)
+            p_3 = self.limitPoints(p_better + self.gamma*(p_bary-p_better))
             F_p3 = self.fitnessfunction(p_3)
 
             if F_p3 > F_worst:
@@ -141,6 +141,9 @@ class NelderMead():
 
 
             
+    def limitPoints(self, point):
+        return np.clip(point, 0, 1)
+
 
     
     def generateRandomVertices(self):

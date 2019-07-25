@@ -45,16 +45,16 @@ class Fitnessfunction():
 
         if np.any(np.array([PARAM1, PARAM2, PARAM3, PARAM4, PARAM5]) > 1) | np.any(np.array([PARAM1, PARAM2, PARAM3, PARAM4, PARAM5]) < 0):
             self.logger.info("Parameter set  (%1.2f, %1.2f, %1.2f, %1.2f, %1.2f) exceeded bounds." % (PARAM1, PARAM2, PARAM3, PARAM4, PARAM5))
-            return 1e12, -1e12, 1e12
+            return 1e12, 1e12, -1e12, 1e12, -1e12
 
-        PARAM1, PARAM2, PARAM3, PARAM4, PARAM5 = self.unnormalized_parameters(paramset)
+        [PARAM1, PARAM2, PARAM3, PARAM4, PARAM5] = self.unnormalized_parameters(paramset)
         try:
-            capex, roi, energy_used = self.run(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5)
+            capex, opex, profit, energy_used, roi = self.run(PARAM1, PARAM2, PARAM3, PARAM4, PARAM5)
         except Exception as e:
             self.logger.error("Fitness evaluation with (%1.2f, %1.2f, %1.2f, %1.2f, %1.2f) failed." % (PARAM1, PARAM2, PARAM3, PARAM4, PARAM5))
             self.logger.error(e)
-            capex, roi, energy_used = 1e12, -1e12, 1e12
-        return capex/1e6, roi, energy_used/1e11
+            capex, opex, profit, energy_used, roi = 1e12, 1e12, -1e12, 1e12, -1e12
+        return capex/1e6, opex/1e6, profit/1e6, energy_used/1e11, roi
 
 
     def unnormalized_parameters(self, paramset):
@@ -75,7 +75,7 @@ class Fitnessfunction():
         HEATEX_T = bounds[3][0] + PARAM4*(bounds[3][1]-bounds[3][0])
         PURGE_RATIO = bounds[4][0] + PARAM5*(bounds[4][1]-bounds[4][0])
 
-        return FEED, EDUCT_RATIO, EDUCT_T, HEATEX_T, PURGE_RATIO
+        return [FEED, EDUCT_RATIO, EDUCT_T, HEATEX_T, PURGE_RATIO]
 
 
 
@@ -213,4 +213,4 @@ class Fitnessfunction():
 
         if DEBUG: print(roi)
 
-        return capex, roi, energy_used
+        return capex, opex, profit, energy_used, roi

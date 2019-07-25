@@ -13,7 +13,7 @@ from numba import jit
 # custom modules
 import modules.constants as constants
 import modules.filehandler as filehandler
-from modules.fitnessfunction import Fitnessfunction
+from modules.fitnessfunction_wrapper import Fitnessfunction_Wrapper as Fitnessfunction
 from modules.oa_neldermead import NelderMead
 
 
@@ -31,15 +31,10 @@ LOGGER = logging.getLogger('main'); LOGGER.setLevel(logging.DEBUG)
 FITNESSFUNCTION = Fitnessfunction()
 
 def main():
-    test=NelderMead(fitness, 5)
+    test=NelderMead(FITNESSFUNCTION.evaluate, 5)
     test.run()
     pass
 
-
-def fitness(data):
-    a, b, c = FITNESSFUNCTION.run_normalized(data)
-    LOGGER.info("CAPEX: %1.4f, ROI: %1.4f" % (a, b))
-    return -0.25*a+0.75*b
 
 
 
