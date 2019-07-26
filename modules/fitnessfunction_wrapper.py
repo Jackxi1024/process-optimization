@@ -80,8 +80,8 @@ class Fitnessfunction_Wrapper():
         return profit
 
     def _evaluator_capexVSroi(self, capex, opex, profit, energy_used, roi):
-        characteristic_iterations = 1500
-        preoptimization_iterations = 1000
+        characteristic_iterations = 5000
+        preoptimization_iterations = 0 # was 500
         limits = [0.0, 0.75]
 
         iters = max(self.iteration-preoptimization_iterations, 0)
