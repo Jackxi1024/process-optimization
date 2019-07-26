@@ -31,8 +31,9 @@ class Reactor():
         self._FEED_A = copy.copy(FEED_A); self._FEED_B = copy.copy(FEED_B); self._RECYCLE = copy.copy(RECYCLE);
         self._TEMPERATURE = (FEED_A.Ftotal*FEED_A.T + FEED_B.Ftotal*FEED_B.T + RECYCLE.Ftotal*RECYCLE.T)/(FEED_A.Ftotal + FEED_B.Ftotal + RECYCLE.Ftotal)
 
-        self.k1 = self.k1*(1+0.3*np.exp(0.01*(self._TEMPERATURE-400)))*max(1-0.01*np.exp(-0.025*(self._TEMPERATURE-500)), 0.1)
-        self.k2 = self.k2*(1+0.2*np.exp(0.01*(self._TEMPERATURE-400)))
+        self.k1 = self.k1*(1+0.3*np.exp(0.01*(self._TEMPERATURE-400)))*max(1-0.01*np.exp(-0.005*(self._TEMPERATURE-1230)), 0.05)
+            # 1-0.01*np.exp(-0.025*(self._TEMPERATURE-500)), 0.05)
+        self.k2 = self.k2*(1+0.2*np.exp(0.01*(self._TEMPERATURE-400)))*max(1-0.01*np.exp(-0.025*(self._TEMPERATURE-500)), 0.1)
         self.k3 = self.k3*(1+1*np.exp(0.02*(self._TEMPERATURE-600)))
 
         # print(self.k1, self.k2, self.k3)

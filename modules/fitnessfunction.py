@@ -63,9 +63,9 @@ class Fitnessfunction():
 
         bounds = [
             [10000, 40000],
-            [0.1, 0.6],
-            [300, 1000],
-            [300, 800],
+            [0.1, 0.4],
+            [300, 860],
+            [300, 790],
             [0.2, 1.0]
         ]
 
@@ -160,7 +160,7 @@ class Fitnessfunction():
         energy = DeltaT*flow*CP_reactor
         energy_used.append(energy)
         capex.append(1e-6*energy)
-        opex.append(1*energy/(20*CP_water))
+        opex.append(3*energy/(20*CP_water))
 
         # decanter
         capex.append(1e5)
